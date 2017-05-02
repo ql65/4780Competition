@@ -13,6 +13,7 @@ trainfile = loadmat('train.mat', squeeze_me=True, struct_as_record=False)
 testfile = loadmat('test.mat', squeeze_me=True, struct_as_record=False)
 xTr = trainfile['x']
 #xValid = xTr[2000: -1]
+
 xTr = xTr[0 : 1999]
 yTr = trainfile['y']
 index = yTr == 0
@@ -55,13 +56,10 @@ def naivebayesPY(x,y):
     for i in range(0, 10):
         pos = y[y == i]
         prob[i] = (float)(len(pos))/(float)(n)
-    print prob
     return prob
 
 def naivebayesPXY(x,y):
     """
-        function [posprob,negprob] = naivebayesPXY(x,y);
-        
         Computation of P(X|Y)
         Input:
         x : n input vectors of d dimensions (nxd)
@@ -72,22 +70,18 @@ def naivebayesPXY(x,y):
         negprob: probability vector of p(x|y=-1) (dx1)
         """
     
-    # add one positive and negative example to avoid division by zero ("plus-one smoothing")
+    # add one per digit example to avoid division by zero ("plus-one smoothing")
     n, d = x.shape
-    x = np.concatenate([x, np.ones((2,d))])
-    y = np.concatenate([y, [-1,1]])
     n, d = x.shape
-    yPos = (y == 1)
-    yNeg = (y == -1)
-    Xpos = x[yPos]
-    Xneg = x[yNeg]
-    totalPos = np.sum(np.count_nonzero(Xpos))
-    totalNeg = np.sum(np.count_nonzero(Xneg))
-    XiPos = (Xpos != 0).sum(0)
-    XiNeg = (Xneg != 0).sum(0)
-    XiPos = np.divide(XiPos, (float)(totalPos))
-    XiNeg = np.divide(XiNeg, (float)(totalNeg))
-    return (XiPos, XiNeg)
+    XiY = np.zeros((10, d))
+    #TODO: find uac and sig(ac) to calculate P(xa | y = c)
+    for i in range(0, 10):
+        y_i = (y == i)
+        x_i = x[y_i]
+        total_i = np.sum(np.count_nonzero(x_i))
+        x_i_sum = (x_i != 0).sum(0)
+        XiY[i] = np.divide(x_i_sum, (float)(total_i))
+    return XiY
 
 def naivebayes(x,y,xtest):
     """
@@ -100,48 +94,44 @@ def naivebayes(x,y,xtest):
         xtest: input vector of d dimensions (1xd)
         
         Output:
-        logratio: log (P(Y = 1|X=x1)/P(Y=-1|X=x1))
+        logratio: log (P(Y_i = 1|X=x1)
         """
+    print xtest
     (n, d) = x.shape
-    (PXYP, PXYN) = naivebayesPXY(x, y)
-    (PYP, PYN) = naivebayesPY(x, y)
-    XZero = (x == 0).sum(0)
-    XOne = (x == 1).sum(0)
-    XOne = np.divide(XOne, (float)(n))
-    XZero = np.divide(XZero, (float)(n))
+    PXiY = naivebayesPXY(x, y)
+    PY = naivebayesPY(x, y)
+    
+    x_i_one = (x == 1).sum(0)
+    x_i_zero = (x == 0).sum(0)
+    x_i_one = np.divide(x_i_one, (float)(n))
+    x_i_zero = np.divide(x_i_zero, (float)(n))
+
     XtestOne = (xtest == 1)
     XtestZero = (xtest == 0)
-    Xone = XOne[XtestOne]
-    Xzero = XZero[XtestZero]
+    Xone = x_i_one[XtestOne]
+    Xzero = x_i_zero[XtestZero]
     PXone = np.prod(Xone)
+    print "pxone", PXone
     PXzero = np.prod(Xzero)
-    PX = PXone * PXzero
+    px = PXone * PXzero
+    print px
+    pyxi = np.zeros((10, ))
+    for i in range(0, 10):
+        print np.power(PXiY[i], xtest)
+#pyxi[i] = (np.prod(np.power(PXiY[i], xtest)) * PY[i]) / (float)(px)
+#XtestOne = (xtest == 1)
+#XtestZero = (xtest == 0)
+#Xone = XOne[XtestOne]
+#Xzero = XZero[XtestZero]
+#PXone = np.prod(Xone)
+#PXzero = np.prod(Xzero)
+#PX = PXone * PXzero
     
-    PYXP = (np.prod(np.power(PXYP, xtest)) * PYP) / (float)(PX)
-    PYXN = (np.prod(np.power(PXYN, xtest)) * PYN) / (float)(PX)
-    return np.log(PYXP/(float)(PYXN))
+#PYXP = (np.prod(np.power(PXYP, xtest)) * PYP) / (float)(PX)
+#PYXN = (np.prod(np.power(PXYN, xtest)) * PYN) / (float)(PX)
+#return np.log(PYXP/(float)(PYXN))
+    print pyxi
+    return pyxi
 
-def naivebayesCL(x,y):
-    """
-        function [w,b]=naivebayesCL(x,y);
-        Implementation of a Naive Bayes classifier
-        Input:
-        x : n input vectors of d dimensions (nxd)
-        y : n labels (-1 or +1)
-        
-        Output:
-        w : weight vector of d dimensions
-        b : bias (scalar)
-        """
-    
-    n, d = x.shape
-    [xpos, xneg] = naivebayesPXY(x,y)
-    [ypos, yneg] = naivebayesPY(x, y)
-    w = np.log(xpos) - np.log(xneg)
-    b = np.log(ypos) - np.log(yneg)
-    return (w, b)
 
-#</GRADED>
-
-naivebayesPY(xTr,yLabel)
-
+naivebayes(xTr, yLabel, xTe[0])
