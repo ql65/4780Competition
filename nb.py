@@ -75,12 +75,27 @@ def naivebayesPXY(x,y):
     n, d = x.shape
     XiY = np.zeros((10, d))
     #TODO: find uac and sig(ac) to calculate P(xa | y = c)
+    uac = 0
+    nc = 0
     for i in range(0, 10):
         y_i = (y == i)
         x_i = x[y_i]
         total_i = np.sum(np.count_nonzero(x_i))
         x_i_sum = (x_i != 0).sum(0)
         XiY[i] = np.divide(x_i_sum, (float)(total_i))
+        uac = uac + y_i * x_i
+        if y_i > 0:
+            nc = nc + 1
+    uac = uac / nc
+    
+    var = 0
+    for i in range(0, 10):
+        y_i = (y == i)
+        x_i = x[y_i]
+        var = var + y_i * (x_i-uac) * (x_i-uac)
+    
+    var = var / nc
+        
     return XiY
 
 def naivebayes(x,y,xtest):
